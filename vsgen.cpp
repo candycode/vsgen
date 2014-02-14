@@ -19,7 +19,7 @@ public: //public interface
     $Methods
 private:
     struct $CType {
-        $IMethods
+        $TMethods
         $CType* Clone() const = 0;
         virtual ~$CType() {}
     };
@@ -28,7 +28,7 @@ private:
         $MMethods
         $CModel(const T& t) : d(t) {}
         $CType* Clone() const {
-            return new CModel(d);
+            return new $CModel(d);
         }
         T d;
     };
@@ -38,25 +38,53 @@ private:
 )T";
 
 
-
-
 //------------------------------------------------------------------------------
 bool TestSubstitute();
 bool TestGenClass();
 
 //------------------------------------------------------------------------------
-std::string GenerateClass(std::istream& is, bool comments = true, int indent = 4) {
+std::string GenerateClass(std::istream& is, bool comments = true,
+                          int indent = 4) {
+    const std::string tab(4, ' ');
     Type t = ReadType(is);
     std::string instname = t.name;
     instname[0] = std::tolower(instname[0]);
     std::string impl =  instname + "Impl_";
     const std::string classPlaceHolder = "$C";
     const std::string implPlaceHolder = "$I";
+    const std::string instPlaceHolder = "$c";
     std::string src = Substitute(T, classPlaceHolder, t.name);
     src = Substitute(src, implPlaceHolder, impl);
-    src = Substitute(src, "$c", instname);
-    std::cout << src << std::endl;
-    std::cout << src << std::endl;
+    src = Substitute(src, instPlaceHolder, instname);
+    //public interface
+    std::string methods;
+    for(auto& i: t.methods) {
+        methods.append(GenerateMethod(i, impl, indent));
+        methods.append("\n");
+    }
+    const std::string publicInterfacePlaceHolder = "$Methods";
+    src = Substitute(src, publicInterfacePlaceHolder, methods);
+    //private interface
+    std::string imethods;
+    for(auto& i: t.methods) {
+        imethods.append(tab);
+        imethods.append(tab);
+        imethods.append(GenerateSignature(i, true, true));
+        imethods.append(";\n");
+    }
+    const std::string privateInterfacePlaceHolder = "$TMethods";
+    src = Substitute(src, privateInterfacePlaceHolder, imethods);
+    //model
+    std::string mmethods;
+    for(auto& i: t.methods) {
+        mmethods.append(tab);
+        mmethods.append(tab);
+        mmethods.append(GenerateMethod(i, "d", 2 * indent, "."));
+        mmethods.append(";\n");
+    }
+    const std::string modelInterfacePlaceHolder = "$MMethods";
+    src = Substitute(src, modelInterfacePlaceHolder, mmethods);
+    return src;
 }
 
 
