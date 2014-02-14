@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include <iostream>
+#include <stdexcept>
 
 //------------------------------------------------------------------------------
 int Find(const std::string& s, const std::string& p, int off = 0) {
@@ -49,11 +50,13 @@ std::vector< std::string > Split(const std::string& s,
 struct FunctionSignature {
     std::string returnType;
     std::string name;
+    bool constModifier = false;
     std::map< std::string, std::string > parameters;    
-    FunctionSignature(const std::string r,
+    FunctionSignature(const std::string& r,
                       const std::string& n,
-                      const std::map< std::string, std::string >& p) :
-        returnType(r), name(n), parameters(p)
+                      const std::map< std::string, std::string >& p,
+                      bool cm) :
+        returnType(r), name(n), parameters(p), constModifier(cm)
     {}
 };
 
@@ -77,6 +80,15 @@ std::pair< int, int > ReturnType(const std::string& s) {
     return std::make_pair(b, ++p.first);
 }
 
+//------------------------------------------------------------------------------
+bool ConstModifier(const std::string& s) {
+    int i = Find(s, ")");
+    if(i < 0) throw std::logic_error("Invalid signature");
+    ++i;
+    while(i != s.size() && isblank(s[i])) ++i;
+    if(i != s.size() && Find(s, "const", i) == i) return true;
+    return false; 
+}
 
 //------------------------------------------------------------------------------
 FunctionSignature Signature(const std::string& f) {
@@ -84,9 +96,14 @@ FunctionSignature Signature(const std::string& f) {
     const std::string ret(f.begin() + r.first, f.begin() + r.second);
     const std::pair< int, int > n = FunctionName(f);
     const std::string name(f.begin() + n.first, f.begin() + n.second);
+    const bool cm = ConstModifier(f);
     int p = n.second;
-    while(f[p] != '(') ++p;
-    const std::string s(f.begin() + p, --f.end());
+    while(f[p] != '(' && p != f.size()) ++p;
+    if(p == f.size()) throw std::logic_error("Invalid signature");    
+    ++p;
+    const int cp = Find(f, ")", p);
+    if(cp < 0) throw std::logic_error("Invalid signature");    
+    const std::string s(f.begin() + p, f.begin() + cp);
     std::map< std::string, std::string > out;
     //split into array of <type name> strings
     std::vector< std::string > split = Split(s, ",");
@@ -103,8 +120,59 @@ FunctionSignature Signature(const std::string& f) {
         const std::string name(i.begin() + e, i.end());
         out[Trim(name)] = Trim(type);
     }
-    return FunctionSignature(ret, name, out);
+    return FunctionSignature(ret, name, out, cm);
 }
+
+//------------------------------------------------------------------------------
+struct Type {
+    std::string name;
+    std::string comment;
+    std::vector< FunctionSignature > methods;
+    std::vector< std::string > methodComments;
+    std::vector< std::string > methodInlineComments;
+};
+
+//------------------------------------------------------------------------------
+//Service.interface
+//Service
+////a start method
+//void Start()
+//void End() //stops service
+Type ReadType(std::istream& is) {
+    std::string buffer;
+    std::string commentBuffer;
+    bool first = true;
+    Type type;
+    while(is) {
+        buffer.clear();
+        std::getline(is, buffer);
+        if(buffer.size()) {
+            std::string::iterator i = buffer.begin();
+            for(; i != buffer.end() && isblank(*i); ++i);
+            if(i != buffer.end() && isalpha(*i)) {
+                if(first) {
+                    type.name = Trim(buffer);
+                    type.comment = commentBuffer;
+                    first = false;
+                    commentBuffer.clear();
+                } else {
+                    const int c = Find(buffer, "//");
+                    if(c > 0) {
+                        type.methodInlineComments.push_back(
+                            std::string(buffer.begin() + c, buffer.end()));
+                    }
+                    type.methods.push_back(Signature(buffer));
+                    type.methodComments.push_back(commentBuffer);
+                    commentBuffer.clear();
+                }
+            } else if(i < buffer.end() - 1 && *i == '/' && *(i+1) == '/') {
+                commentBuffer.append(std::string(i, buffer.end()) + "\n");
+            }   
+        }    
+    }
+    return type;
+}
+
 
 //------------------------------------------------------------------------------
 bool TestFind();
@@ -122,13 +190,21 @@ int main(int, char**) {
     assert(TestReturnType());
     assert(TestFunctionName());
     
-    const std::string sig="float Foo(int i, float j, const std::string& msg)";
+    const std::string sig=" float Foo  ( int i, float j, const std::string& msg )";
     FunctionSignature fs = Signature(sig);
     assert(fs.returnType == "float");
     assert(fs.name == "Foo");
     assert(fs.parameters["i"] == "int");
     assert(fs.parameters["j"] == "float");
     assert(fs.parameters["msg"] == "const std::string&");
+    assert(fs.constModifier == false);
+
+    const std::string sig2="void f() const; //a const method";
+    FunctionSignature fs2 = Signature(sig2);
+    assert(fs2.returnType == "void");
+    assert(fs2.name == "f");
+    assert(fs2.parameters.empty());
+    assert(fs2.constModifier == true);
     return 0;
 }
 
