@@ -20,10 +20,15 @@ int main(int, char**) {
     for(auto& i: type.methodComments) cout << i << endl;
     for(auto& i: type.methodInlineComments) cout << i << endl;
     for(auto& i: type.methods) {
-        cout << '\n';
+        cout << "\n---------------------\n";
         cout << "return type: " << i.returnType << endl;
         cout << "name:        " << i.name << endl;
         cout << "const:       " << boolalpha << i.constModifier << endl;
+        if(i.parameters.size() > 0) cout << "parameters:     " << endl;
+        for(auto& j: i.parameters) {
+            cout << "  name: " << j.name << endl;
+            cout << "  type: " << j.type << endl;
+        }
      }
     return 0;
 }
