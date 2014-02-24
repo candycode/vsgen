@@ -31,7 +31,7 @@ inline std::string Trim(const std::string& s) {
 
 //------------------------------------------------------------------------------
 inline std::vector< std::string > Split(const std::string& s,
-                                 const std::string& p) {
+                                        const std::string& p) {
     std::vector< std::string > tokens;
     int prev = 0;
     int i = Find(s, p, prev);
