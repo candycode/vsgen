@@ -16,16 +16,16 @@ public:
         $I = std::move(c.$I);
     }
 public: //public interface
-    $Methods
+$Methods
 private:
     struct $CType {
-        $TMethods
+$TMethods
         $CType* Clone() const = 0;
         virtual ~$CType() {}
     };
     template < typename T >
     struct $CModel : $CType {
-        $MMethods
+$MMethods
         $CModel(const T& t) : d(t) {}
         $CType* Clone() const {
             return new $CModel(d);
@@ -45,7 +45,7 @@ bool TestGenClass();
 //------------------------------------------------------------------------------
 std::string GenerateClass(std::istream& is, bool comments = true,
                           int indent = 4) {
-    const std::string tab(4, ' ');
+    const std::string tab(indent, ' ');
     Type t = ReadType(is);
     std::string instname = t.name;
     instname[0] = std::tolower(instname[0]);
@@ -59,10 +59,11 @@ std::string GenerateClass(std::istream& is, bool comments = true,
     //public interface
     std::string methods;
     for(auto& i: t.methods) {
-        methods.append(GenerateMethod(i, impl, indent));
+        methods.append(GenerateMethod(i, impl, 1, indent));
         methods.append("\n");
     }
     const std::string publicInterfacePlaceHolder = "$Methods";
+   
     src = Substitute(src, publicInterfacePlaceHolder, methods);
     //private interface
     std::string imethods;
@@ -77,10 +78,7 @@ std::string GenerateClass(std::istream& is, bool comments = true,
     //model
     std::string mmethods;
     for(auto& i: t.methods) {
-        mmethods.append(tab);
-        mmethods.append(tab);
-        mmethods.append(GenerateMethod(i, "d", 2 * indent, "."));
-        mmethods.append(";\n");
+        mmethods.append(GenerateMethod(i, "d", 2, indent, "."));
     }
     const std::string modelInterfacePlaceHolder = "$MMethods";
     src = Substitute(src, modelInterfacePlaceHolder, mmethods);
@@ -126,14 +124,14 @@ bool TestSubstitute() {
 
 bool TestGenClass() {
     const char* C = 
-    R"(
-    Service
-    void Next()
-    void Flush()
-    int Failed()
-    void Start()
-    void Stop()
-    )";
+R"(
+Service
+void Next()
+void Flush()
+int Failed()
+void Start()
+void Stop()
+)";
     std::istringstream iss(C);
     cout << GenerateClass(iss);
     

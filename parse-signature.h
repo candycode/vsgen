@@ -194,7 +194,9 @@ inline std::string Substitute(const std::string in,
         prev = i + from.size();
         i = Find(in, from, prev);
     }
-    out.append(std::string(in.begin() + prev, in.end()));
+    if(prev < in.size()) {
+        out.append(std::string(in.begin() + prev, in.end()));
+    }
     return out;
 }
 
@@ -223,13 +225,18 @@ inline std::string GenerateSignature(const FunctionSignature& s,
 //------------------------------------------------------------------------------
 inline std::string GenerateMethod(const FunctionSignature& s,
                                   const std::string& impl,
-                                  int indent,
+                                  int indentationLevel = 1,  
+                                  int tabSize = 4,
                                   const std::string& methodAccess = "->") {
     std::ostringstream oss;
-    const std::string tab(indent, ' ');
-    oss << tab;
+    const std::string tab(tabSize, ' ');
+    for(int i = 0; i != indentationLevel; ++i) {
+        oss << tab;
+    }
     oss << GenerateSignature(s) << " {\n";
-    oss << tab << tab;
+     for(int i = 0; i != indentationLevel + 1; ++i) {
+        oss << tab;
+    }
     if(s.returnType != "void") oss << "return ";
     oss << impl << methodAccess << s.name << "(";
     if(s.parameters.size() == 0) oss << ");\n";
@@ -241,6 +248,9 @@ inline std::string GenerateMethod(const FunctionSignature& s,
         oss << ");\n";
     }
     
-    oss << tab << "}";
+    for(int i = 0; i != indentationLevel; ++i) {
+        oss << tab;
+    }
+    oss << "}\n";
     return oss.str();
 }
