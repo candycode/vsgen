@@ -116,7 +116,6 @@ inline FunctionSignature Signature(const std::string& f) {
     std::vector< std::string > split = Split(s, ",");
     //split each <type name> into (type, name) pairs and add to map
     //as (name, type)
-    //for(auto& i: split) std::cout << i << std::endl;
     for(auto& i: split) {
         int e = i.size() - 1;
         for(; e >= 0 && isblank(i[e]); --e);

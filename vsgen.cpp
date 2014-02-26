@@ -2,7 +2,8 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
-#include "parse-signature.h"
+#include <fstream>
+#include "vsgen.h"
 
 static const char* T =
 R"T(
@@ -43,7 +44,9 @@ bool TestSubstitute();
 bool TestGenClass();
 
 //------------------------------------------------------------------------------
-std::string GenerateClass(std::istream& is, bool comments = true,
+std::string GenerateClass(std::istream& is,
+                          const std::string& tmpl,
+                          bool comments = true,
                           int indent = 4) {
     const std::string tab(indent, ' ');
     Type t = ReadType(is);
@@ -53,7 +56,7 @@ std::string GenerateClass(std::istream& is, bool comments = true,
     const std::string classPlaceHolder = "$C";
     const std::string implPlaceHolder = "$I";
     const std::string instPlaceHolder = "$c";
-    std::string src = Substitute(T, classPlaceHolder, t.name);
+    std::string src = Substitute(tmpl, classPlaceHolder, t.name);
     src = Substitute(src, implPlaceHolder, impl);
     src = Substitute(src, instPlaceHolder, instname);
     //public interface
@@ -91,18 +94,22 @@ using namespace std;
 
 //------------------------------------------------------------------------------
 int main(int argc, char** argv) {
-    TestGenClass();
-//    if(argc != 4) {
-//        cout << "usage: " << argv[0] << "<input file> <output file> <indent>\n";// <typeinfo=y|n>"
-//        return 0;
-//    }
-//    ifstream is(argv[1]);
-//    if(!is) {
-//        cerr << "Cannot open file " << argv[1] << endl;
-//        return 1;
-//    }
-//    const string g = GenerateClass(is);
-//    cout << g << endl;
+    //no parsing of comment yes/no and tab size yet
+    if(argc < 3) {
+        cout << "usage: " << argv[0] << " <input file> <output file>";
+        return 0;
+    }
+    ifstream is(argv[1]);
+    if(!is) {
+        cerr << "Cannot read from file " << argv[1] << endl;
+        return EXIT_FAILURE;
+    }
+    ofstream os(argv[2]);
+    if(!os) {
+        cerr << "Cannot open file " << argv[1] << " for writing" << endl;
+        return EXIT_FAILURE;
+    }
+    os << GenerateClass(is, T);
     return 0;
 }
 
@@ -133,6 +140,6 @@ void Start()
 void Stop()
 )";
     std::istringstream iss(C);
-    cout << GenerateClass(iss);
+    cout << GenerateClass(iss, T);
     
 }
